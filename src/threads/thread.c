@@ -256,6 +256,11 @@ thread_unblock (struct thread *t)
                           value_less, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
+  if(intr_context ())
+    intr_yield_on_return();
+  else if(intr_get_level() == INTR_ON){
+    thread_yield();
+  }
 }
 
 /* Returns the name of the running thread. */
@@ -353,7 +358,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  int cur_pri = thread_current ()->priority;
   thread_current ()->priority = new_priority;
+  intr_set_level (old_level);
+  if(new_priority < cur_pri){
+    thread_yield();
+  }
 }
 
 /* Returns the current thread's priority. */
